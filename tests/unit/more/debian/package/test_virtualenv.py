@@ -55,7 +55,7 @@ class VirtualenvRoleTest(ProvyTestCase):
         with self.mock_role_method('remote_exists_dir') as remote_exists_dir:
             remote_exists_dir.return_value = True
             self.assertTrue(self.role.env_exists('fancylib'))
-            virtual_env_dir = os.path.join(self.role.base_directory, 'fancylib')
+            virtual_env_dir = '/'.join((self.role.base_directory, 'fancylib'))
             remote_exists_dir.assert_called_with(virtual_env_dir)
 
     @istest
@@ -63,7 +63,7 @@ class VirtualenvRoleTest(ProvyTestCase):
         with self.mock_role_method('remote_exists_dir') as remote_exists_dir:
             remote_exists_dir.return_value = False
             self.assertFalse(self.role.env_exists('fancylib'))
-            virtual_env_dir = os.path.join(self.role.base_directory, 'fancylib')
+            virtual_env_dir = '/'.join((self.role.base_directory, 'fancylib'))
             remote_exists_dir.assert_called_with(virtual_env_dir)
 
     @istest

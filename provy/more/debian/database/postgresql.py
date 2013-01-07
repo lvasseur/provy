@@ -37,7 +37,7 @@ class PostgreSQLRole(Role):
         '''
         with self.using(AptitudeRole) as role:
             role.ensure_package_installed('postgresql')
-            role.ensure_package_installed('postgresql-server-dev-9.1')
+            role.ensure_package_installed('postgresql-server-dev-8.4')
 
     def __execute(self, command, stdout=True):
         return self.execute(command, stdout=stdout, sudo=True, user='postgres')

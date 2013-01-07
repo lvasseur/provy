@@ -600,7 +600,7 @@ class Role(object):
         </pre>
         '''
         if sudo:
-            temp_path = join(self.remote_temp_dir(), split(from_file)[-1])
+            temp_path = '/'.join((self.remote_temp_dir(), split(from_file)[-1]))
             put(from_file, temp_path)
             self.execute('cp %s %s' % (temp_path, to_file), stdout=False, sudo=True)
             return

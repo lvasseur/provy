@@ -149,6 +149,7 @@ class MongoDBRole(Role):
     def __tmp_file_with_config(self, config):
 
         output_buffer = StringIO()
+        config.newlines = '\n'
         config.write(output_buffer)
         tmp_file = self.write_to_temp_file(output_buffer.getvalue())
         return tmp_file
