@@ -141,7 +141,7 @@ class AptitudeRole(Role):
                     file_path = role.update_date_file
         </pre>
         '''
-        return join(self.remote_temp_dir(), 'last_aptitude_update')
+        return '%s/%s' % (self.remote_temp_dir(), 'last_aptitude_update')
 
     def store_update_date(self):
         '''
