@@ -2,73 +2,82 @@
 # -*- coding: utf-8 -*-
 
 '''
-Roles in this namespace are meant to provide Ruby utility methods for Debian distributions.
+Roles in this namespace are meant to provide `Ruby <http://www.ruby-lang.org/>`_ utility methods for Debian distributions.
 '''
-
-from fabric.api import settings
 
 from provy.core import Role
 from provy.more.debian import AptitudeRole
 
+
+UPDATE_ALTERNATIVES_COMMAND = """
+update-alternatives --force --install /usr/bin/ruby ruby /usr/bin/ruby{version} {priority} \
+  --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz /usr/share/man/man1/ruby{version}.1.gz \
+  --slave   /usr/bin/ri ri /usr/bin/ri{version} \
+  --slave   /usr/share/man/man1/ri.1.gz ri.1.gz /usr/share/man/man1/ri{version}.1.gz \
+  --slave   /usr/bin/irb irb /usr/bin/irb{version} \
+  --slave   /usr/share/man/man1/irb.1.gz irb.1.gz /usr/share/man/man1/irb{version}.1.gz \
+  --slave   /usr/bin/erb erb /usr/bin/erb{version} \
+  --slave   /usr/share/man/man1/erb.1.gz erb.1.gz /usr/share/man/man1/erb{version}.1.gz \
+  --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc{version} \
+  --slave   /usr/share/man/man1/rdoc.1.gz rdoc.1.gz /usr/share/man/man1/rdoc{version}.1.gz \
+  --slave   /usr/bin/testrb testrb /usr/bin/testrb{version} \
+  --slave   /usr/share/man/man1/testrb.1.gz testrb.1.gz /usr/share/man/man1/testrb{version}.1.gz
+"""
+
+
 class RubyRole(Role):
     '''
-    This role provides Ruby utilities for Debian distributions.
+    This role provides `Ruby <http://www.ruby-lang.org/>`_ utilities for Debian distributions.
 
-    <em>Sample usage</em>
-    <pre class="sh_python">
-    from provy.core import Role
-    from provy.more.debian import RubyRole
+    :var version: Ruby version to install. By default, install package "1.9.1" - which, in effect, refers to "1.9.2" (only uses the "1.9.1" name for compatibility reasons).
+    :type version: :class:`str`
+    :var priority: Priority to attribute to this Ruby version in the server. By default, it's 400 - which is already higher than the default Ruby installation in some Debian-like systems -.
+    :type priority: :class:`int`
 
-    class MySampleRole(Role):
-        def provision(self):
-            self.provision_role(RubyRole)
-    </pre>
-    '''
+    Example:
+    ::
 
-    version = "1.9.2"
-    patch = 290
-    url = "http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-%s-p%d.tar.gz"
-
-    def __symlink_from_local(self):
-        commands = "erb gem irb rake rdoc ri ruby testrb"
-
-        for command in commands.split():
-            self.remove_file('/usr/bin/%s' % command, sudo=True)
-            self.remote_symlink('/usr/local/bin/%s' % command, '/usr/bin/%s' % command, sudo=True)
-
-    def provision(self):
-        '''
-        Installs Ruby and its dependencies. This method should be called upon if overriden in base classes, or Ruby won't work properly in the remote server.
-        <em>Sample usage</em>
-        <pre class="sh_python">
         from provy.core import Role
         from provy.more.debian import RubyRole
 
         class MySampleRole(Role):
             def provision(self):
-                self.provision_role(RubyRole) # no need to call this if using with block.
+                self.provision_role(RubyRole)
 
-        </pre>
+                # Now, suppose we want the new Ruby installed, but not as the default one:
+                RubyRole.version = 1.8
+                RubyRole.priority = 10
+                self.provision_role(RubyRole)
+                RubyRole.version = 1.9.1
+                RubyRole.priority = 1
+                self.provision_role(RubyRole)
+                # As priority 10 wins over 1, Ruby 1.8 will be used as the default "ruby" executable.
+    '''
+
+    version = '1.9.1'
+    priority = 400
+
+    def provision(self):
         '''
-        with self.using(AptitudeRole) as role:
-            for package in 'build-essential zlib1g zlib1g-dev libreadline5 libreadline5-dev libssl-dev libyaml-dev'.split():
-                role.ensure_package_installed(package)
+        Installs `Ruby <http://www.ruby-lang.org/>`_ and its dependencies.
+        This method should be called upon if overriden in base classes, or Ruby won't work properly in the remote server.
 
-            with settings(warn_only=True):
-                result = self.execute('ruby --version | egrep %sp%d' % (self.version, self.patch), stdout=False)
+        Example:
+        ::
 
-            if not result or 'command not found' in result.lower():
-                self.log('ruby %sp%d not found! Installing...' % (self.version, self.patch))
-                ruby_url = self.url % (self.version, self.patch)
-                ruby_file = 'ruby-%s-p%d' % (self.version, self.patch)
+            from provy.core import Role
+            from provy.more.debian import RubyRole
 
-                self.remove_file('/tmp/%s.tar.gz' % ruby_file, sudo=True)
-                self.remove_dir('/tmp/%s' % ruby_file, sudo=True)
+            class MySampleRole(Role):
+                def provision(self):
+                    self.provision_role(RubyRole) # no need to call this if using with block.
+        '''
+        with self.using(AptitudeRole) as aptitude:
+            aptitude.ensure_up_to_date()
+            aptitude.ensure_package_installed('ruby{version}-full'.format(version=self.version))
 
-                self.execute('cd /tmp && wget %s && tar xzf %s.tar.gz && cd %s && ./configure && make && make install' %
-                        (ruby_url, ruby_file, ruby_file), sudo=True, stdout=False)
-
-                self.__symlink_from_local()
-
-                self.log('ruby %sp%d installed!' % (self.version, self.patch))
-
+            update_alternatives_command = UPDATE_ALTERNATIVES_COMMAND.format(
+                version=self.version,
+                priority=self.priority,
+            )
+            self.execute(update_alternatives_command, sudo=True)

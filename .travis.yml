@@ -7,4 +7,6 @@ before_install:
 # command to install dependencies
 install: pip install -r REQUIREMENTS --use-mirrors
 # command to run tests
-script: make test
+script: make build
+after_success:
+  - coveralls

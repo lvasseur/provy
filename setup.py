@@ -11,7 +11,7 @@ setup(
     keywords='provisioning devops infrastructure server',
     author='Bernardo Heynemann',
     author_email='heynemann@gmail.com',
-    url='http://heynemann.github.com/provy',
+    url='https://provy.readthedocs.org',
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -24,7 +24,7 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Topic :: System :: Installation/Setup'
     ],
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests']),
     include_package_data=True,
     package_data={
         '': ['*.template'],
@@ -33,7 +33,6 @@ setup(
     install_requires=[
         "fabric",
         "jinja2",
-        "M2Crypto",
         "configobj",
     ],
 

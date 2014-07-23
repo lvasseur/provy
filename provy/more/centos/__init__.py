@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# flake8: noqa
 
 '''
 Roles in this namespace are suited for provisioning centos servers.
@@ -11,3 +12,4 @@ from provy.more.centos.networking import *
 from provy.more.centos.vcs import *
 from provy.more.centos.messaging import *
 from provy.more.centos.utils import *
+from provy.more.centos.database import *

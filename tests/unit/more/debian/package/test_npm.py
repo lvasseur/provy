@@ -1,15 +1,13 @@
-from contextlib import contextmanager
-
-from mock import MagicMock, patch, call
+from mock import patch
 from nose.tools import istest
 
-from provy.core.roles import DistroInfo
-from provy.more.debian import AptitudeRole, NodeJsRole, NPMRole
+from provy.more.debian import NodeJsRole, NPMRole
 from tests.unit.tools.helpers import ProvyTestCase
 
 
 class NPMRoleTest(ProvyTestCase):
     def setUp(self):
+        super(NPMRoleTest, self).setUp()
         self.role = NPMRole(prov=None, context={})
 
     @istest

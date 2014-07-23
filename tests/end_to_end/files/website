@@ -1,0 +1,22 @@
+upstream frontends {
+    server {{ host }}:8000;
+    server {{ host }}:8001;
+    server {{ host }}:8002;
+    server {{ host }}:8003;
+}
+
+server {
+    listen {{ port }};
+    server_name  localhost {{ host }};
+
+    access_log  /home/frontend/website.access.log;
+
+    location / {
+        proxy_pass_header Server;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        proxy_pass http://frontends;
+    }
+}

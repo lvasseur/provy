@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 
-from mock import MagicMock, patch, call, ANY
+from mock import patch, call
 from nose.tools import istest
 
 from provy.more.debian import AptitudeRole, PipRole
@@ -24,10 +24,10 @@ class PipRoleTestCase(ProvyTestCase):
 
     @contextmanager
     def checking_that_package(self, is_installed=True, can_be_updated=None):
-        with patch('provy.more.debian.PipRole.is_package_installed') as is_package_installed:
+        with self.mock_role_method('is_package_installed') as is_package_installed:
             is_package_installed.return_value = is_installed
             if can_be_updated is not None:
-                with patch('provy.more.debian.PipRole.package_can_be_updated') as package_can_be_updated:
+                with self.mock_role_method('package_can_be_updated') as package_can_be_updated:
                     package_can_be_updated.return_value = can_be_updated
                     yield
             else:
@@ -36,19 +36,19 @@ class PipRoleTestCase(ProvyTestCase):
 
     @contextmanager
     def remote_version_as(self, version):
-        with patch('provy.more.debian.PipRole.get_package_remote_version') as get_package_remote_version:
+        with self.mock_role_method('get_package_remote_version') as get_package_remote_version:
             get_package_remote_version.return_value = version
             yield
 
     @contextmanager
     def latest_version_as(self, version):
-        with patch('provy.more.debian.PipRole.get_package_latest_version') as get_package_latest_version:
+        with self.mock_role_method('get_package_latest_version') as get_package_latest_version:
             get_package_latest_version.return_value = version
             yield
 
     @contextmanager
     def installing(self, package):
-        with patch('provy.more.debian.PipRole.ensure_package_installed') as ensure_package_installed:
+        with self.mock_role_method('ensure_package_installed') as ensure_package_installed:
             yield
             if package is not None:
                 ensure_package_installed.assert_called_with(package)
@@ -58,11 +58,12 @@ class PipRoleTestCase(ProvyTestCase):
 
 class PipRoleTest(PipRoleTestCase):
     def setUp(self):
-        self.role = PipRole(prov=None, context={'user': 'johndoe',})
+        super(PipRoleTest, self).setUp()
+        self.role = PipRole(prov=None, context={'user': 'johndoe'})
 
     @istest
     def extracts_package_name_as_data_from_input(self):
-        self.assertEqual(self.role.extract_package_data_from_input('django'), {'name': 'django',})
+        self.assertEqual(self.role.extract_package_data_from_input('django'), {'name': 'django'})
 
     @istest
     def extracts_package_name_version_and_equal_to_as_data_from_input(self):
@@ -76,6 +77,11 @@ class PipRoleTest(PipRoleTestCase):
     def extracts_package_name_from_specific_repository_path(self):
         self.assertEqual(self.role.extract_package_data_from_input('-e hg+http://bitbucket.org/bkroeze/django-keyedcache/#egg=django-keyedcache'),
                          {"name": "django-keyedcache"})
+
+    @istest
+    def extracts_package_name_from_specific_repository_path_without_egg(self):
+        self.assertEqual(self.role.extract_package_data_from_input('-e hg+http://bitbucket.org/bkroeze/django-keyedcache/'),
+                         {"name": "-e hg+http://bitbucket.org/bkroeze/django-keyedcache/"})
 
     @istest
     def extracts_package_name_from_specific_repository_url(self):
@@ -98,6 +104,11 @@ class PipRoleTest(PipRoleTestCase):
             self.assertFalse(self.role.is_package_installed("django>=1.3.0"))
 
     @istest
+    def fails_check_if_a_package_is_installed_by_lesser_version(self):
+        with self.executing("pip freeze | tr '[A-Z]' '[a-z]' | grep django", returning="django==1.2.3"):
+            self.assertTrue(self.role.is_package_installed("django>=1.1.0"))
+
+    @istest
     def fails_check_if_a_package_is_installed_by_greater_version_through_parameter(self):
         with self.executing("pip freeze | tr '[A-Z]' '[a-z]' | grep django", returning="django==1.2.3"):
             self.assertFalse(self.role.is_package_installed("django", version="1.3.0"))
@@ -108,11 +119,11 @@ class PipRoleTest(PipRoleTestCase):
             self.assertFalse(self.role.is_package_installed("django"))
 
     @istest
-    def ensures_requirements_are_installed(self):
+    def ensures_requirements_are_installed_using_correctly_spelled_method_name(self):
         from os.path import abspath, join, dirname
-        with patch('provy.more.debian.PipRole.ensure_package_installed') as ensure_package_installed:
-            requeriments_file_name = abspath(join(dirname(__file__), "../../../fixtures/for_testing.txt"))
-            self.role.ensure_requeriments_installed(requeriments_file_name)
+        with self.mock_role_method('ensure_package_installed') as ensure_package_installed:
+            requirements_file_name = abspath(join(dirname(__file__), "../../../fixtures/for_testing.txt"))
+            self.role.ensure_requirements_installed(requirements_file_name)
             ensure_package_installed.assert_has_calls([
                 call('Django'),
                 call('yolk==0.4.1'),
@@ -160,24 +171,12 @@ class PipRoleTest(PipRoleTestCase):
 
     @istest
     def gets_none_as_version_if_remote_doesnt_have_it_installed(self):
-        test_case = self
-        @contextmanager
-        def fake_settings(self, warn_only):
-            test_case.assertTrue(warn_only)
-            yield
-
-        with patch('fabric.api.settings', fake_settings), self.executing("pip freeze | tr '[A-Z]' '[a-z]' | grep django", returning=''):
+        with self.warn_only(), self.executing("pip freeze | tr '[A-Z]' '[a-z]' | grep django", returning=''):
             self.assertIsNone(self.role.get_package_remote_version('django'))
 
     @istest
     def gets_version_if_remote_has_it_installed(self):
-        test_case = self
-        @contextmanager
-        def fake_settings(self, warn_only):
-            test_case.assertTrue(warn_only)
-            yield
-
-        with patch('fabric.api.settings', fake_settings), self.executing("pip freeze | tr '[A-Z]' '[a-z]' | grep django", returning='django==1.2.3'):
+        with self.warn_only(), self.executing("pip freeze | tr '[A-Z]' '[a-z]' | grep django", returning='django==1.2.3'):
             self.assertEqual(self.role.get_package_remote_version('django'), '1.2.3')
 
     @istest
@@ -252,4 +251,3 @@ class PipRoleTest(PipRoleTestCase):
 
         self.assertTrue(self.role.use_sudo)
         self.assertEqual(self.role.user, None)
-

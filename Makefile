@@ -1,35 +1,42 @@
-vows:
-	@env PYTHONPATH=. pyvows --cover --cover_package=provy --cover_package=unit.tools.role_context --cover_threshold=80.0 tests/
+ifndef PROVY_COVER
+	PROVY_COVER=provy
+	COVER_PERCENTAGE=100
+else
+	COVER_PERCENTAGE=0
+endif
+
 
 setup:
 	@pip install --requirement=REQUIREMENTS
-
-vms:
-	@cd vagrant && vagrant destroy && vagrant up
-
-front:
-	@cd tests/functional && env PYTHONPATH=../../ python ../../provy/console.py -s test.frontend -p vagrant front-end-user=frontend
-
-back:
-	@cd tests/functional && env PYTHONPATH=../../ python ../../provy/console.py -s test.backend -p vagrant
-
-djangofront:
-	@cd tests/functional && env PYTHONPATH=../../ python ../../provy/console.py -s test.frontend -p vagrant  front-end-user=frontend django_provyfile.py
-
-djangoback:
-	@cd tests/functional && env PYTHONPATH=../../ python ../../provy/console.py -s test.backend -p vagrant django_provyfile.py
-
-rails:
-	@cd tests/functional && env PYTHONPATH=../../ python ../../provy/console.py -s test -p vagrant front-end-user=frontend rails_provyfile.py
-
-ssh:
-	@cd vagrant && vagrant ssh frontend
-
-ssh-back:
-	@cd vagrant && vagrant ssh backend
 
 docs:
 	@python docs.py
 
 test:
-	@env PYTHONHASHSEED=random PYTHONPATH=. nosetests --with-coverage --cover-package=provy --with-yanc --with-xtraceback tests/
+	@env PYTHONHASHSEED=random PYTHONPATH=. nosetests --with-coverage --cover-min-percentage=$(COVER_PERCENTAGE) --cover-package=$(PROVY_COVER) --cover-erase --cover-html  --cover-xml --with-yanc --with-xtraceback -e end_to_end tests/
+
+build: test
+	@echo Running syntax check...
+	@flake8 . --ignore=E501
+
+# This target is for hardcore linting only, not taken into consideration for the build.
+lint:
+	@echo Starting hardcore lint...
+	@pylint --rcfile=pylint.cfg provy
+
+sysinfo:
+	@echo Free disk space:
+	@df -h
+	@echo Plaform info:
+	@uname -a
+	@echo Distribution info:
+	@lsb_release -a
+	@echo 'Memory info (in megabytes):'
+	@free -m
+
+
+
+# Targets for the end-to-end test. Requires Vagrant to be installed.
+
+end-to-end:
+	@make -C tests/end_to_end end-to-end

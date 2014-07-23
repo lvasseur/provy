@@ -1,6 +1,5 @@
 from contextlib import contextmanager
 import os
-import sys
 
 from mock import MagicMock, patch, call
 from nose.tools import istest
@@ -11,7 +10,8 @@ from tests.unit.tools.helpers import ProvyTestCase
 
 class VirtualenvRoleTest(ProvyTestCase):
     def setUp(self):
-        self.role = VirtualenvRole(prov=None, context={'user': 'johndoe',})
+        super(VirtualenvRoleTest, self).setUp()
+        self.role = VirtualenvRole(prov=None, context={'user': 'johndoe'})
 
     @contextmanager
     def env_exists(self, env_name):
@@ -20,15 +20,23 @@ class VirtualenvRoleTest(ProvyTestCase):
 
     @istest
     def refers_to_specific_subdir_at_user_home(self):
-        role = VirtualenvRole(prov=None, context={'user': 'johndoe',})
+        role = VirtualenvRole(prov=None, context={'user': 'johndoe'})
 
-        self.assertEqual(role.base_directory, '/home/johndoe/.virtualenvs')
+        self.assertEqual(role.get_base_directory(), '/home/johndoe/.virtualenvs')
 
     @istest
     def refers_to_specific_subdir_at_root_home(self):
-        role = VirtualenvRole(prov=None, context={'user': 'root',})
+        role = VirtualenvRole(prov=None, context={'user': 'root'})
 
-        self.assertEqual(role.base_directory, '/root/.virtualenvs')
+        self.assertEqual(role.get_base_directory(), '/root/.virtualenvs')
+
+    @istest
+    def refers_to_custom_subdir(self):
+        role = VirtualenvRole(prov=None, context={'user': 'johndoe'})
+
+        role.base_directory = '/somewhere/else'
+
+        self.assertEqual(role.get_base_directory(), '/somewhere/else')
 
     @istest
     def installs_virtualenv_harness_when_provisioned(self):
@@ -45,9 +53,17 @@ class VirtualenvRoleTest(ProvyTestCase):
             execute.assert_called_with('virtualenv /home/johndoe/.virtualenvs/foo_env', user='johndoe')
 
     @istest
+    def creates_a_virtual_environment_for_a_specific_user(self):
+        with self.execute_mock() as execute:
+            self.role.user = 'jackisback'
+            env_dir = self.role.create_env('foo_env')
+            self.assertEqual(env_dir, '/home/jackisback/.virtualenvs/foo_env')
+            execute.assert_called_with('virtualenv /home/jackisback/.virtualenvs/foo_env', user='jackisback')
+
+    @istest
     def creates_a_virtual_environment_with_system_site_packages(self):
         with self.execute_mock() as execute:
-            env_dir = self.role.create_env('foo_env', system_site_packages=True)
+            self.role.create_env('foo_env', system_site_packages=True)
             execute.assert_called_with('virtualenv --system-site-packages /home/johndoe/.virtualenvs/foo_env', user='johndoe')
 
     @istest
@@ -78,7 +94,7 @@ class VirtualenvRoleTest(ProvyTestCase):
             execute('called after prefix')
 
         with patch('provy.core.roles.Role.execute', execute), patch('fabric.api.prefix', prefix), self.env_exists('fancylib') as env_exists:
-            venv = VirtualenvRole(prov=None, context={'user': 'johndoe',})
+            venv = VirtualenvRole(prov=None, context={'user': 'johndoe'})
             env_exists.return_value = False
 
             with venv('fancylib'):
@@ -87,8 +103,8 @@ class VirtualenvRoleTest(ProvyTestCase):
 
             env_exists.assert_called_with('fancylib')
 
-            env_creation_call = call('virtualenv %s/fancylib' % venv.base_directory, user='johndoe')
-            activation_prefix_call = call('prefix: "source %s/fancylib/bin/activate"' % venv.base_directory)
+            env_creation_call = call('virtualenv %s/fancylib' % venv.get_base_directory(), user='johndoe')
+            activation_prefix_call = call('prefix: "source %s/fancylib/bin/activate"' % venv.get_base_directory())
 
             expected_executes = [
                 env_creation_call,
@@ -112,7 +128,7 @@ class VirtualenvRoleTest(ProvyTestCase):
             execute('called after prefix')
 
         with patch('provy.core.roles.Role.execute', execute), patch('fabric.api.prefix', prefix), self.env_exists('fancylib') as env_exists:
-            venv = VirtualenvRole(prov=None, context={'user': 'johndoe',})
+            venv = VirtualenvRole(prov=None, context={'user': 'johndoe'})
             env_exists.return_value = True
 
             with venv('fancylib'):
@@ -121,7 +137,7 @@ class VirtualenvRoleTest(ProvyTestCase):
 
             env_exists.assert_called_with('fancylib')
 
-            activation_prefix_call = call('prefix: "source %s/fancylib/bin/activate"' % venv.base_directory)
+            activation_prefix_call = call('prefix: "source %s/fancylib/bin/activate"' % venv.get_base_directory())
 
             expected_executes = [
                 call('called before prefix'),
@@ -137,4 +153,4 @@ class VirtualenvRoleTest(ProvyTestCase):
         with self.execute_mock() as execute:
             with self.role('fancylib', system_site_packages=True):
                 pass
-            execute.assert_any_call('virtualenv --system-site-packages %s/fancylib' % self.role.base_directory, user='johndoe')
+            execute.assert_any_call('virtualenv --system-site-packages %s/fancylib' % self.role.get_base_directory(), user='johndoe')

@@ -1,6 +1,3 @@
-from contextlib import contextmanager
-
-from mock import MagicMock, patch, call
 from nose.tools import istest
 
 from provy.more.debian import AptitudeRole, MongoDBRole
@@ -9,19 +6,8 @@ from tests.unit.tools.helpers import ProvyTestCase
 
 class MongoDBRoleTest(ProvyTestCase):
     def setUp(self):
+        super(MongoDBRoleTest, self).setUp()
         self.role = MongoDBRole(prov=None, context={})
-
-    @contextmanager
-    def mongo_method(self, method_name):
-        with patch('provy.more.debian.MongoDBRole.%s' % method_name) as mock:
-            yield mock
-
-    @contextmanager
-    def mock_file_ops(self):
-        with self.mock_role_method('read_remote_file') as read_remote_file:
-            with self.mock_role_method('write_to_temp_file') as write_to_temp_file:
-                with self.mock_role_method('put_file') as put_file:
-                    yield read_remote_file, write_to_temp_file, put_file
 
     def content_from_list(self, list_):
         return '\n'.join(list_)
@@ -48,13 +34,13 @@ class MongoDBRoleTest(ProvyTestCase):
 
     @istest
     def provisions_to_debian_if_is_debian(self):
-        with self.provisioning_to('debian'), self.mongo_method('provision_to_debian') as provision_to_debian:
+        with self.provisioning_to('debian'), self.mock_role_method('provision_to_debian') as provision_to_debian:
             self.role.provision()
             provision_to_debian.assert_called_with()
 
     @istest
     def provisions_to_ubuntu_if_is_ubuntu(self):
-        with self.provisioning_to('ubuntu'), self.mongo_method('provision_to_ubuntu') as provision_to_ubuntu:
+        with self.provisioning_to('ubuntu'), self.mock_role_method('provision_to_ubuntu') as provision_to_ubuntu:
             self.role.provision()
             provision_to_ubuntu.assert_called_with()
 
@@ -67,7 +53,7 @@ class MongoDBRoleTest(ProvyTestCase):
 
     @istest
     def appends_configuration_to_server_config(self):
-        with self.mock_file_ops() as (read_remote_file, write_to_temp_file, put_file):
+        with self.mock_role_methods('read_remote_file', 'write_to_temp_file', 'put_file') as (read_remote_file, write_to_temp_file, put_file):
             read_remote_file.return_value = self.content_from_list([
                 'foo=Foo',
             ])
@@ -87,7 +73,7 @@ class MongoDBRoleTest(ProvyTestCase):
 
     @istest
     def converts_boolean_config_from_input(self):
-        with self.mock_file_ops() as (read_remote_file, write_to_temp_file, put_file):
+        with self.mock_role_methods('read_remote_file', 'write_to_temp_file', 'put_file') as (read_remote_file, write_to_temp_file, put_file):
             read_remote_file.return_value = self.content_from_list([
                 'foo=Foo',
             ])
@@ -107,7 +93,7 @@ class MongoDBRoleTest(ProvyTestCase):
 
     @istest
     def overwrites_original_configuration_when_redefined(self):
-        with self.mock_file_ops() as (read_remote_file, write_to_temp_file, put_file):
+        with self.mock_role_methods('read_remote_file', 'write_to_temp_file', 'put_file') as (read_remote_file, write_to_temp_file, put_file):
             read_remote_file.return_value = self.content_from_list([
                 'foo=Foo',
             ])

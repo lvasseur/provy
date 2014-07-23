@@ -1,6 +1,4 @@
-from contextlib import contextmanager
-
-from mock import MagicMock, patch, call
+from mock import call
 from nose.tools import istest
 
 from provy.more.debian import AptitudeRole, IPTablesRole
@@ -9,18 +7,19 @@ from tests.unit.tools.helpers import ProvyTestCase
 
 class IPTablesRoleTest(ProvyTestCase):
     def setUp(self):
-        self.role = IPTablesRole(prov=None, context={'cleanup': [],})
+        super(IPTablesRoleTest, self).setUp()
+        self.role = IPTablesRole(prov=None, context={'cleanup': []})
 
     @istest
     def installs_necessary_packages_to_provision(self):
-        with self.using_stub(AptitudeRole) as aptitude, self.execute_mock() as execute:
+        with self.using_stub(AptitudeRole) as aptitude, self.execute_mock():
             self.role.provision()
 
             aptitude.ensure_package_installed.assert_any_call('iptables')
 
     @istest
     def allows_ssh_connection_during_provisioning(self):
-        with self.using_stub(AptitudeRole) as aptitude, self.execute_mock() as execute:
+        with self.using_stub(AptitudeRole), self.execute_mock() as execute:
             self.role.provision()
 
             execute.assert_any_call('iptables -A INPUT -j ACCEPT -p tcp --dport ssh', stdout=False, sudo=True)
@@ -125,37 +124,37 @@ class IPTablesRoleTest(ProvyTestCase):
             execute.assert_called_with('iptables -A INPUT -j ACCEPT -p tcp -m state --state ESTABLISHED,RELATED', stdout=False, sudo=True)
 
     @istest
-    def denies_incoming_connections_in_all_ports_and_protocols(self):
+    def rejects_incoming_connections_in_all_ports_and_protocols(self):
         with self.execute_mock() as execute:
-            self.role.deny()
+            self.role.reject()
 
             execute.assert_called_with('iptables -A INPUT -j REJECT -p all', stdout=False, sudo=True)
 
     @istest
-    def denies_tcp_connections_in_all_ports(self):
+    def rejects_tcp_connections_in_all_ports(self):
         with self.execute_mock() as execute:
-            self.role.deny(protocol="tcp")
+            self.role.reject(protocol="tcp")
 
             execute.assert_called_with('iptables -A INPUT -j REJECT -p tcp', stdout=False, sudo=True)
 
     @istest
-    def denies_tcp_connections_in_a_specific_port(self):
+    def rejects_tcp_connections_in_a_specific_port(self):
         with self.execute_mock() as execute:
-            self.role.deny(port=80, protocol="tcp")
+            self.role.reject(port=80, protocol="tcp")
 
             execute.assert_called_with('iptables -A INPUT -j REJECT -p tcp --dport 80', stdout=False, sudo=True)
 
     @istest
-    def denies_outgoing_connections(self):
+    def rejects_outgoing_connections(self):
         with self.execute_mock() as execute:
-            self.role.deny(direction="out")
+            self.role.reject(direction="out")
 
             execute.assert_called_with('iptables -A OUTPUT -j REJECT -p all', stdout=False, sudo=True)
 
     @istest
-    def denies_incoming_connections_in_all_ports_with_a_match_filter(self):
+    def rejects_incoming_connections_in_all_ports_with_a_match_filter(self):
         with self.execute_mock() as execute:
-            self.role.deny(match="state", state="ESTABLISHED,RELATED")
+            self.role.reject(match="state", state="ESTABLISHED,RELATED")
 
             execute.assert_called_with('iptables -A INPUT -j REJECT -p all -m state --state ESTABLISHED,RELATED', stdout=False, sudo=True)
 

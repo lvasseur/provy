@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 '''
-Roles in this namespace are meant to provide hostname utilities
-methods within CentOS distributions.
+Roles in this namespace are meant to provide hostname utilities methods within CentOS distributions.
 '''
 from fabric.contrib.files import sed
 from fabric.api import settings, hide
@@ -15,22 +14,27 @@ class HostNameRole(Role):
     def ensure_hostname(self, hostname):
 
         '''
-        Ensure a fixed hostname
-        <em>Parameters</em>
-        hostname - Hostname to be created
-        <em>Sample usage</em>
-        class MySampleRole(Role):
-            def provision(self):
-                with self.using(HostNameRole) as role:
-                    role.ensure_hostname('rabbit')
+        Ensure a fixed hostname is configured in the server.
+
+        :param hostname: Hostname to be created.
+        :type hostname: :class:`str`
+
+        Example:
+        ::
+
+            class MySampleRole(Role):
+                def provision(self):
+                    with self.using(HostNameRole) as role:
+                        role.ensure_hostname('rabbit')
         '''
+
+        if hostname == self.execute('hostname'):
+            return False
+
         path = '/etc/sysconfig/network'
 
         file = self.read_remote_file(path)
         hostname_line = 'HOSTNAME={0}'.format(hostname)
-
-        if hostname == self.execute('hostname'):
-            return False
 
         self.log('Setting up hostname')
 

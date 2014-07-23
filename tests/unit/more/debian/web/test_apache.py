@@ -1,15 +1,13 @@
-from contextlib import contextmanager
-
-from mock import MagicMock, patch, call
+from mock import patch
 from nose.tools import istest
 
-from provy.core.roles import DistroInfo
 from provy.more.debian import ApacheRole, AptitudeRole
 from tests.unit.tools.helpers import ProvyTestCase
 
 
 class ApacheRoleTest(ProvyTestCase):
     def setUp(self):
+        super(ApacheRoleTest, self).setUp()
         self.role = ApacheRole(prov=None, context={})
 
     @istest
@@ -30,7 +28,7 @@ class ApacheRoleTest(ProvyTestCase):
 
     @istest
     def ensures_site_is_available_from_template(self):
-        with self.execute_mock() as execute, self.mock_role_method('update_file') as update_file, self.mock_role_method('remote_symlink') as remote_symlink:
+        with self.execute_mock(), self.mock_role_method('update_file') as update_file, self.mock_role_method('remote_symlink'):
             self.role.create_site('bar-website', template='/local/path/to/bar-website')
 
             update_file.assert_called_with('/local/path/to/bar-website', '/etc/apache2/sites-available/bar-website', options={}, sudo=True)
@@ -38,10 +36,10 @@ class ApacheRoleTest(ProvyTestCase):
 
     @istest
     def ensures_site_is_available_from_template_and_options(self):
-        with self.execute_mock() as execute, self.mock_role_method('update_file') as update_file, self.mock_role_method('remote_symlink') as remote_symlink:
-            self.role.create_site('bar-website', template='/local/path/to/bar-website', options={'foo': 'Baz',})
+        with self.execute_mock(), self.mock_role_method('update_file') as update_file, self.mock_role_method('remote_symlink'):
+            self.role.create_site('bar-website', template='/local/path/to/bar-website', options={'foo': 'Baz'})
 
-            update_file.assert_called_with('/local/path/to/bar-website', '/etc/apache2/sites-available/bar-website', options={'foo': 'Baz',}, sudo=True)
+            update_file.assert_called_with('/local/path/to/bar-website', '/etc/apache2/sites-available/bar-website', options={'foo': 'Baz'}, sudo=True)
             self.assertTrue(self.role.must_restart)
 
     @istest
@@ -78,7 +76,7 @@ class ApacheRoleTest(ProvyTestCase):
 
     @istest
     def must_not_restart_again_if_already_restarted(self):
-        with self.execute_mock() as execute:
+        with self.execute_mock():
             self.role.ensure_restart()
             self.role.restart()
 
