@@ -6,6 +6,8 @@ Module responsible for the base Role and its operations.
 '''
 import re
 import codecs
+import sys
+import zlib
 from contextlib import contextmanager
 import os
 from os.path import exists, split, dirname, isabs
@@ -685,7 +687,7 @@ class Role(object):
         if not self.local_exists(path):
             return None
 
-        result = self.execute_local(self.__md5_hash_command(path), stdout=False, sudo=True)
+        result = self.execute_local(self.__md5_hash_command(path, True), stdout=False, sudo=True)
         return result.strip()
 
     def md5_remote(self, path):
@@ -713,8 +715,13 @@ class Role(object):
         result = self.execute(self.__md5_hash_command(path), stdout=False, sudo=True)
         return result.strip()
 
-    def __md5_hash_command(self, path):
-        return 'md5sum %s | cut -d " " -f 1' % path
+    def __md5_hash_command(self, path, local=False):
+        if local and sys.platform == 'win32':
+            lines = codecs.open(path, 'rb', 'utf-8').readlines()
+            prev = reduce(lambda prev, each_line: zlib.crc32(each_line, prev), lines, 0)
+            return "%X" % (prev & 0xFFFFFFFF)
+        else:
+            return 'md5sum %s | cut -d " " -f 1' % path
 
     def remove_dir(self, path, sudo=False, recursive=False, stdout=True):
         '''

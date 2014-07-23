@@ -47,6 +47,11 @@ class PostgreSQLRole(BasePostgreSQLRole):
         distro = self.get_distro_info()
         if distro.distributor_id.lower() == 'ubuntu':
             version = '9.2'
+        elif distro.distributor_id.lower() == 'debian':
+            if distro.codename == 'squeeze':
+                version = '8.4'
+            elif distro.codename == 'wheezy':
+                version = '9.1'
         else:
             version = '8.4'
         return version
